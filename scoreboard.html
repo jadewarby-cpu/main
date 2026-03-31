@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Score Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+      color: #e0aaff;
+      letter-spacing: 1px;
+    }
+
+    /* ── Setup screen ── */
+    #setup-screen { display: flex; flex-direction: column; gap: 12px; }
+
+    #player-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .player-entry {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .player-entry input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1.5px solid #444;
+      background: #16213e;
+      color: #eee;
+      font-size: 1rem;
+    }
+
+    .player-entry input:focus { outline: none; border-color: #e0aaff; }
+
+    .btn-remove {
+      background: #c0392b;
+      border: none;
+      color: white;
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .btn-add  { background: #16213e; color: #e0aaff; border: 1.5px dashed #e0aaff; }
+    .btn-start { background: #7b2d8b; color: white; font-size: 1.1rem; margin-top: 4px; }
+    .btn-start:disabled { opacity: 0.4; cursor: default; }
+
+    /* ── Game screen ── */
+    #game-screen { display: none; flex-direction: column; gap: 16px; }
+
+    /* scoreboard */
+    #scoreboard {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      background: #16213e;
+      border-radius: 12px;
+      padding: 12px 16px;
+      gap: 10px;
+    }
+
+    .score-row.leader { border: 2px solid #f9c74f; }
+
+    .player-name {
+      flex: 1;
+      font-size: 1.05rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .crown { font-size: 1rem; margin-right: 4px; }
+
+    .total-score {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #e0aaff;
+      min-width: 50px;
+      text-align: right;
+    }
+
+    /* round entry */
+    #round-section {
+      background: #16213e;
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    #round-section h2 {
+      font-size: 1rem;
+      color: #aaa;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    #round-inputs { display: flex; flex-direction: column; gap: 10px; }
+
+    .round-input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .round-label {
+      flex: 1;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .round-input-row input {
+      width: 90px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1.5px solid #444;
+      background: #0f3460;
+      color: #eee;
+      font-size: 1.1rem;
+      text-align: center;
+    }
+
+    .round-input-row input:focus { outline: none; border-color: #e0aaff; }
+
+    .btn-submit { background: #0f3460; color: #e0aaff; margin-top: 8px; border: 1.5px solid #e0aaff; }
+
+    /* history */
+    #history-section { margin-top: 4px; }
+
+    #history-section summary {
+      cursor: pointer;
+      color: #aaa;
+      font-size: 0.9rem;
+      padding: 8px 0;
+      user-select: none;
+    }
+
+    #history-table-wrap { overflow-x: auto; margin-top: 8px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #333;
+      text-align: center;
+    }
+
+    th { color: #e0aaff; font-weight: 600; }
+    td:first-child, th:first-child { text-align: left; color: #aaa; }
+
+    /* action bar */
+    #action-bar {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-reset { background: #c0392b; color: white; flex: 1; }
+    .btn-undo  { background: #333; color: #eee; flex: 1; }
+    .btn-undo:disabled { opacity: 0.35; cursor: default; }
+  </style>
+</head>
+<body>
+
+<h1>Score Tracker</h1>
+
+<!-- SETUP -->
+<div id="setup-screen">
+  <div id="player-list">
+    <div class="player-entry">
+      <input type="text" placeholder="Player 1" maxlength="20" autofocus>
+      <button class="btn-remove" onclick="removePlayer(this)">✕</button>
+    </div>
+    <div class="player-entry">
+      <input type="text" placeholder="Player 2" maxlength="20">
+      <button class="btn-remove" onclick="removePlayer(this)">✕</button>
+    </div>
+  </div>
+  <button class="btn btn-add" onclick="addPlayerField()">+ Add Player</button>
+  <button class="btn btn-start" id="btn-start" onclick="startGame()">Start Game</button>
+</div>
+
+<!-- GAME -->
+<div id="game-screen">
+  <div id="scoreboard"></div>
+
+  <div id="round-section">
+    <h2 id="round-label">Round 1</h2>
+    <div id="round-inputs"></div>
+    <button class="btn btn-submit" onclick="submitRound()">Add Round Scores</button>
+  </div>
+
+  <details id="history-section">
+    <summary>Round History</summary>
+    <div id="history-table-wrap"><table id="history-table"></table></div>
+  </details>
+
+  <div id="action-bar">
+    <button class="btn btn-undo" id="btn-undo" onclick="undoRound()">↩ Undo Last</button>
+    <button class="btn btn-reset" onclick="resetGame()">New Game</button>
+  </div>
+</div>
+
+<script>
+  let players = [];    // [{name, total}]
+  let history = [];    // [{scores: [...]}]
+
+  /* ── Setup ── */
+
+  function addPlayerField() {
+    const list = document.getElementById('player-list');
+    const n = list.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'player-entry';
+    div.innerHTML = `<input type="text" placeholder="Player ${n}" maxlength="20">
+                     <button class="btn-remove" onclick="removePlayer(this)">✕</button>`;
+    list.appendChild(div);
+    div.querySelector('input').focus();
+  }
+
+  function removePlayer(btn) {
+    const list = document.getElementById('player-list');
+    if (list.children.length <= 1) return;
+    btn.parentElement.remove();
+  }
+
+  function startGame() {
+    const inputs = document.querySelectorAll('#player-list .player-entry input');
+    const names = [...inputs].map(i => i.value.trim()).filter(Boolean);
+    if (names.length < 1) return;
+
+    players = names.map(name => ({ name, total: 0 }));
+    history = [];
+
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'flex';
+
+    renderScoreboard();
+    renderRoundInputs();
+    renderHistory();
+    updateUndoBtn();
+  }
+
+  /* ── Game ── */
+
+  function renderScoreboard() {
+    const board = document.getElementById('scoreboard');
+    const maxScore = Math.max(...players.map(p => p.total));
+
+    board.innerHTML = [...players]
+      .map((p, i) => ({ ...p, i }))
+      .sort((a, b) => b.total - a.total)
+      .map(p => {
+        const isLeader = players.length > 1 && p.total === maxScore && p.total > 0;
+        return `<div class="score-row${isLeader ? ' leader' : ''}">
+          <span class="player-name">${isLeader ? '<span class="crown">👑</span>' : ''}${esc(p.name)}</span>
+          <span class="total-score">${p.total}</span>
+        </div>`;
+      }).join('');
+  }
+
+  function renderRoundInputs() {
+    const container = document.getElementById('round-inputs');
+    document.getElementById('round-label').textContent = `Round ${history.length + 1}`;
+
+    container.innerHTML = players.map((p, i) =>
+      `<div class="round-input-row">
+        <span class="round-label">${esc(p.name)}</span>
+        <input type="number" inputmode="numeric" id="ri-${i}" placeholder="0">
+      </div>`
+    ).join('');
+
+    // auto-focus first input
+    const first = document.getElementById('ri-0');
+    if (first) first.focus();
+
+    // submit on Enter from last field
+    const last = document.getElementById(`ri-${players.length - 1}`);
+    if (last) last.addEventListener('keydown', e => { if (e.key === 'Enter') submitRound(); });
+  }
+
+  function submitRound() {
+    const scores = players.map((_, i) => {
+      const val = parseFloat(document.getElementById(`ri-${i}`).value);
+      return isNaN(val) ? 0 : val;
+    });
+
+    history.push({ scores });
+    players.forEach((p, i) => p.total += scores[i]);
+
+    renderScoreboard();
+    renderRoundInputs();
+    renderHistory();
+    updateUndoBtn();
+  }
+
+  function undoRound() {
+    if (!history.length) return;
+    const last = history.pop();
+    players.forEach((p, i) => p.total -= last.scores[i]);
+
+    renderScoreboard();
+    renderRoundInputs();
+    renderHistory();
+    updateUndoBtn();
+  }
+
+  function renderHistory() {
+    const table = document.getElementById('history-table');
+    if (!history.length) { table.innerHTML = '<tr><td style="color:#666">No rounds yet</td></tr>'; return; }
+
+    const header = `<tr><th>Round</th>${players.map(p => `<th>${esc(p.name)}</th>`).join('')}</tr>`;
+    const rows = history.map((r, idx) =>
+      `<tr><td>${idx + 1}</td>${r.scores.map(s => `<td>${s}</td>`).join('')}</tr>`
+    ).join('');
+
+    table.innerHTML = header + rows;
+  }
+
+  function updateUndoBtn() {
+    document.getElementById('btn-undo').disabled = history.length === 0;
+  }
+
+  function resetGame() {
+    if (!confirm('Start a new game? Current scores will be lost.')) return;
+    document.getElementById('game-screen').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'flex';
+
+    // clear player name fields
+    const inputs = document.querySelectorAll('#player-list .player-entry input');
+    inputs.forEach(i => i.value = '');
+    inputs[0].focus();
+  }
+
+  function esc(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+</body>
+</html>
